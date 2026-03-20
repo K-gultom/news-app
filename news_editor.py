@@ -356,11 +356,16 @@ class NewsEditor(tk.Tk):
         return True
 
     def _reset_form(self):
-        for w in [self.entry_judul, self.entry_author]:
-            w.delete(0, "end")
+        # Paksa focus dulu agar tkinter tidak skip delete pada widget tidak aktif
+        self.entry_judul.focus_force()
+        self.entry_judul.delete(0, "end")
+        self.entry_author.focus_force()
+        self.entry_author.delete(0, "end")
         self._selected_date = datetime.date.today()
         self.lbl_tanggal.config(text=format_tanggal(self._selected_date))
+        self.text_isi.focus_force()
         self.text_isi.delete("1.0", "end")
+        self.after(50, self.entry_judul.focus_set)
 
     # ── Simpan ────────────────────────────────────────────────
     def _save(self):
@@ -395,7 +400,9 @@ class NewsEditor(tk.Tk):
                 msg += "  |  ℹ️  generate_list.py tidak ditemukan"
 
         self._set_status(msg, SUCCESS)
-        self._reset_form()
+        # Gunakan after() agar reset berjalan setelah event loop
+        # kembali normal pasca filedialog ditutup
+        self.after(100, self._reset_form)
 
     def _write_html(self, path, judul, author, tanggal: datetime.date, isi):
         tgl_fmt = format_tanggal(tanggal)
