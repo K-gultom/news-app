@@ -1267,3 +1267,18 @@ if __name__ == "__main__":
 
 
     # versi 1.2 - 27 Juni 2024
+
+    # Grup    Fitur
+    # Font familyGeorgia, Segoe UI, Arial, Times New Roman, Courier New, dll
+    # Font size8px sampai 48px via dropdown
+    # B    Cetak tebal (Bold)
+    # I    Cetak miring (Italic)
+    # U    Garis bawah (Underline)
+    # S̶    Coret (Strikethrough)
+    # ⬤≡ / ≡≡ / ≡⬤ Rata kiri / tengah / kanan
+    # • —Bullet list (otomatis tambah • di awal baris)
+    # 1. —Numbered list (otomatis penomoran)
+    # A (5 warna)
+    # Warna teks: hitam, biru, merah, hijau, kuning
+    # ✕ fmt
+    # Hapus semua formatting dari seleksi
