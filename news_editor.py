@@ -400,9 +400,6 @@ class NewsEditor(tk.Tk):
                 msg += "  |  ℹ️  generate_list.py tidak ditemukan"
 
         self._set_status(msg, SUCCESS)
-        # Gunakan after() agar reset berjalan setelah event loop
-        # kembali normal pasca filedialog ditutup
-        self.after(100, self._reset_form)
 
     def _write_html(self, path, judul, author, tanggal: datetime.date, isi):
         tgl_fmt = format_tanggal(tanggal)
@@ -563,12 +560,14 @@ class NewsEditor(tk.Tk):
                 append("\n✅  Sync selesai! Semua perubahan berhasil dipush.\n", "ok")
                 self._set_status("✅  Sync server selesai.", SUCCESS)
 
-                # Countdown 3 detik lalu tutup otomatis
+                # Countdown 3 detik → tutup window → bersihkan form
                 def _tick(n):
                     if not win.winfo_exists():
                         return
                     if n <= 0:
                         win.destroy()
+                        # Reset form setelah window sync tertutup
+                        self._do_reset_form()
                     else:
                         countdown_lbl.config(text=f"Window akan tertutup dalam {n} detik...")
                         win.after(1000, lambda: _tick(n - 1))
@@ -581,6 +580,18 @@ class NewsEditor(tk.Tk):
                                     activebackground=ACCENT_H, activeforeground="white")
 
         win.after(150, run_all)
+
+    def _do_reset_form(self):
+        """Reset form yang dipanggil setelah window eksternal (sync) tertutup.
+        Menggunakan after() agar tkinter sudah settle sebelum menghapus isi."""
+        def _do():
+            self.entry_judul.delete(0, "end")
+            self.entry_author.delete(0, "end")
+            self._selected_date = datetime.date.today()
+            self.lbl_tanggal.config(text=format_tanggal(self._selected_date))
+            self.text_isi.delete("1.0", "end")
+            self.entry_judul.focus_set()
+        self.after(200, _do)
 
     # ── Bersihkan manual ──────────────────────────────────────
     def _clear(self):
