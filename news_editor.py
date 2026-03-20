@@ -423,7 +423,7 @@ class NewsEditor(tk.Tk):
         perintah = [
             ("git add .",                     ["git", "add", "."]),
             (f'git commit -m "{commit_msg}"', ["git", "commit", "-m", commit_msg]),
-            ("git push",                      ["git", "push"]),
+            # ("git push",                      ["git", "push"]),
             ("git pull",                      ["git", "pull"]),
             ("git add .",                     ["git", "add", "."]),
             (f'git commit -m "{commit_msg}"', ["git", "commit", "-m", commit_msg]),
