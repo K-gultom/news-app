@@ -419,19 +419,9 @@ class NewsEditor(tk.Tk):
 
         tanggal_commit = datetime.datetime.now().strftime("%d %B %Y %H:%M")
         commit_msg = f"commit berita terbaru {tanggal_commit}"
+        self._run_git_window(folder, commit_msg)
 
-        perintah = [
-            ("git add .",                     ["git", "add", "."]),
-            (f'git commit -m "{commit_msg}"', ["git", "commit", "-m", commit_msg]),
-            # ("git push",                      ["git", "push"]),
-            ("git pull",                      ["git", "pull"]),
-            ("git add .",                     ["git", "add", "."]),
-            (f'git commit -m "{commit_msg}"', ["git", "commit", "-m", commit_msg]),
-            ("git push",                      ["git", "push"]),
-        ]
-        self._run_git_window(folder, perintah)
-
-    def _run_git_window(self, folder, perintah):
+    def _run_git_window(self, folder, commit_msg):
         win = tk.Toplevel(self)
         win.title("Sync Server")
         win.geometry("600x440")
@@ -476,39 +466,94 @@ class NewsEditor(tk.Tk):
             log.configure(state="disabled")
             win.update()
 
-        def run_all():
-            success = True
-            for label, cmd in perintah:
-                append(f"\n$ {label}\n", "cmd")
-                try:
-                    result = subprocess.run(cmd, cwd=folder,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT,
-                                            text=True)
-                    if result.stdout.strip():
-                        append(result.stdout.strip() + "\n", "output")
-                    if result.returncode != 0:
-                        if cmd[1] == "commit" and result.returncode == 1:
-                            append("ℹ  Tidak ada perubahan baru untuk di-commit.\n", "warn")
-                        else:
-                            append(f"✖  Gagal (exit {result.returncode})\n", "err")
-                            success = False; break
-                    else:
-                        append("✔  OK\n", "ok")
-                except FileNotFoundError:
-                    append("✖  Git tidak ditemukan. Pastikan Git terinstall dan ada di PATH.\n", "err")
-                    success = False; break
-                except Exception as e:
-                    append(f"✖  Error: {e}\n", "err")
-                    success = False; break
+        def run(cmd_label, cmd, allow_rc1=False):
+            """Jalankan satu perintah git. Kembalikan (success, returncode)."""
+            append(f"\n$ {cmd_label}\n", "cmd")
+            try:
+                result = subprocess.run(cmd, cwd=folder,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        text=True)
+                if result.stdout.strip():
+                    append(result.stdout.strip() + "\n", "output")
+                if result.returncode == 0:
+                    append("✔  OK\n", "ok")
+                    return True, 0
+                elif allow_rc1 and result.returncode == 1:
+                    append("ℹ  Tidak ada perubahan untuk di-commit.\n", "warn")
+                    return True, 1
+                else:
+                    append(f"✖  Gagal (exit {result.returncode})\n", "err")
+                    return False, result.returncode
+            except FileNotFoundError:
+                append("✖  Git tidak ditemukan. Pastikan Git terinstall dan ada di PATH.\n", "err")
+                return False, -1
+            except Exception as e:
+                append(f"✖  Error: {e}\n", "err")
+                return False, -1
 
+        def has_conflict(folder):
+            """Cek apakah ada file yang sedang konflik."""
+            result = subprocess.run(["git", "diff", "--name-only", "--diff-filter=U"],
+                                    cwd=folder, stdout=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL, text=True)
+            return result.stdout.strip()
+
+        def run_all():
+            # ── Tahap 1: simpan perubahan lokal dulu ──
+            append("\n─── Tahap 1: Simpan perubahan lokal ───\n", "cmd")
+            ok, _ = run("git add .", ["git", "add", "."])
+            if not ok: return _finish(False)
+
+            ok, rc = run(f'git commit -m "{commit_msg}"',
+                         ["git", "commit", "-m", commit_msg], allow_rc1=True)
+            if not ok: return _finish(False)
+
+            # ── Tahap 2: pull dari remote ──
+            append("\n─── Tahap 2: Pull dari server ───\n", "cmd")
+            ok, _ = run("git pull", ["git", "pull"])
+
+            if not ok:
+                # Cek apakah penyebabnya adalah merge conflict
+                konflik = has_conflict(folder)
+                if konflik:
+                    append(f"\n⚠️  Conflict terdeteksi pada file:\n{konflik}\n", "warn")
+                    append("→  Menyelesaikan conflict otomatis (ambil versi lokal)...\n", "warn")
+
+                    # Ambil versi lokal untuk semua file yang konflik
+                    for f in konflik.splitlines():
+                        f = f.strip()
+                        if f:
+                            ok2, _ = run(f"git checkout --ours {f}",
+                                         ["git", "checkout", "--ours", f])
+                            if not ok2: return _finish(False)
+
+                    # Add ulang file yang sudah di-resolve
+                    ok, _ = run("git add .", ["git", "add", "."])
+                    if not ok: return _finish(False)
+
+                    # Commit hasil merge
+                    ok, _ = run(f'git commit -m "merge: resolve conflict {commit_msg}"',
+                                ["git", "commit", "-m",
+                                 f"merge: resolve conflict {commit_msg}"], allow_rc1=True)
+                    if not ok: return _finish(False)
+                else:
+                    return _finish(False)
+
+            # ── Tahap 3: push ke remote ──
+            append("\n─── Tahap 3: Push ke server ───\n", "cmd")
+            ok, _ = run("git push", ["git", "push"])
+            if not ok: return _finish(False)
+
+            _finish(True)
+
+        def _finish(success):
             if success:
                 append("\n✅  Sync selesai! Semua perubahan berhasil dipush.\n", "ok")
                 self._set_status("✅  Sync server selesai.", SUCCESS)
             else:
                 append("\n⚠️  Sync berhenti karena ada error.\n", "err")
                 self._set_status("⚠️  Sync server gagal. Lihat log.", WARNING)
-
             close_btn.configure(state="normal", bg=ACCENT, fg="white",
                                 activebackground=ACCENT_H, activeforeground="white")
 
