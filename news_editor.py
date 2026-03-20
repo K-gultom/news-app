@@ -1264,3 +1264,6 @@ class NewsEditor(tk.Tk):
 
 if __name__ == "__main__":
     NewsEditor().mainloop()
+
+
+    # versi 1.2 - 27 Juni 2024
