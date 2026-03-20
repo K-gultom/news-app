@@ -7,7 +7,7 @@ generate_list.py
 import os, json, sys, time, datetime
 
 FOLDER   = os.path.dirname(os.path.abspath(__file__))
-OUT_FILE = os.path.join(FOLDER, "file-list.json")
+OUT_FILE = os.path.join(FOLDER, "file-list.json") 
 SKIP     = {"index.html"}
 
 def scan():
