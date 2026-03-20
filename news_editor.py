@@ -453,11 +453,15 @@ class NewsEditor(tk.Tk):
         log.tag_config("err",    foreground="#F87171")
         log.tag_config("output", foreground="#CBD5E1")
 
+        countdown_lbl = tk.Label(win, text="", bg=BG, fg=MUTED,
+                                 font=("Segoe UI", 9))
+        countdown_lbl.pack(pady=(8, 0))
+
         close_btn = tk.Button(win, text="Tutup", state="disabled",
                               bg=BORDER, fg=MUTED, relief="flat",
                               font=("Segoe UI", 10), padx=16, pady=7,
                               cursor="hand2", command=win.destroy)
-        close_btn.pack(pady=12)
+        close_btn.pack(pady=(4, 12))
 
         def append(text, tag="output"):
             log.configure(state="normal")
@@ -551,11 +555,23 @@ class NewsEditor(tk.Tk):
             if success:
                 append("\n✅  Sync selesai! Semua perubahan berhasil dipush.\n", "ok")
                 self._set_status("✅  Sync server selesai.", SUCCESS)
+
+                # Countdown 3 detik lalu tutup otomatis
+                def _tick(n):
+                    if not win.winfo_exists():
+                        return
+                    if n <= 0:
+                        win.destroy()
+                    else:
+                        countdown_lbl.config(text=f"Window akan tertutup dalam {n} detik...")
+                        win.after(1000, lambda: _tick(n - 1))
+                _tick(3)
             else:
-                append("\n⚠️  Sync berhenti karena ada error.\n", "err")
+                append("\n⚠️  Sync berhenti karena ada error. Periksa log di atas.\n", "err")
                 self._set_status("⚠️  Sync server gagal. Lihat log.", WARNING)
-            close_btn.configure(state="normal", bg=ACCENT, fg="white",
-                                activebackground=ACCENT_H, activeforeground="white")
+                # Biarkan terbuka, aktifkan tombol Tutup
+                close_btn.configure(state="normal", bg=ACCENT, fg="white",
+                                    activebackground=ACCENT_H, activeforeground="white")
 
         win.after(150, run_all)
 
