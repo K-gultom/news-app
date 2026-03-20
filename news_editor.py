@@ -192,7 +192,7 @@ class NewsEditor(tk.Tk):
             b.pack(fill="x")
             self._nav_btns[key] = b
 
-        tk.Label(self.sidebar, text="v2.0", bg=SIDEBAR, fg="#475569",
+        tk.Label(self.sidebar, text="v1.2.0", bg=SIDEBAR, fg="#475569",
                  font=("Segoe UI",8)).pack(side="bottom", pady=8)
 
         self.content = tk.Frame(self, bg=BG)
